@@ -25,6 +25,7 @@ TSM Group Maker helps World of Warcraft players quickly convert item IDs from Wo
 - **Plain numbers**: `12345, 67890, 13579` (comma or space separated)
 - **Item format**: `item:12345`
 - **TSM format**: `i:12345` (will be included as-is)
+- **Item names**: `[Thunderfury, Blessed Blade of the Windseeker]` (searches Wowhead for the item ID)
 
 ## 📦 Output Format
 
@@ -38,11 +39,12 @@ This can be imported directly into TradeSkillMaster's group import feature (up t
 ## 🛠️ Features
 
 - ✅ Extracts item IDs from multiple formats
+- ✅ Searches Wowhead by item name (using square brackets)
 - ✅ Removes duplicates automatically
 - ✅ Counts total and unique items
 - ✅ One-click copy to clipboard
 - ✅ Clean, responsive design
-- ✅ Works offline (no server required)
+- ✅ Works offline (except for item name search)
 
 ## 💻 Installation
 
@@ -62,12 +64,15 @@ https://www.wowhead.com/item=19019/thunderfury-blessed-blade-of-the-windseeker
 https://www.wowhead.com/item=17182/sulfuras-hand-of-ragnaros
 18803, 18832
 item:17076
+[Ashkandi, Greatsword of the Brotherhood]
 ```
 
 **Output:**
 ```
-i:17076,i:17182,i:18803,i:18832,i:19019
+i:17076,i:17182,i:18803,i:18832,i:19019,i:19364
 ```
+
+Note: When using item names in square brackets, the tool will search Wowhead to find the item ID automatically.
 
 ## 🤝 Contributing
 

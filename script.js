@@ -27,10 +27,70 @@ function extractItemIds(text) {
         itemIds.add(match[1]);
     }
     
-    return Array.from(itemIds).sort((a, b) => Number(a) - Number(b));
+    return itemIds;
 }
 
-function convertToTSM() {
+async function searchWowheadForItemName(itemName) {
+    // Note: Due to CORS restrictions and ad blockers, automated searching may not work
+    // This function attempts to search but provides helpful feedback if it fails
+    
+    // Try to use allorigins which is more reliable
+    const proxy = 'https://api.allorigins.win/raw?url=';
+    const searchUrl = `https://www.wowhead.com/items/name:${encodeURIComponent(itemName)}`;
+    
+    try {
+        const proxyUrl = proxy + encodeURIComponent(searchUrl);
+        const response = await fetch(proxyUrl, {
+            signal: AbortSignal.timeout(8000) // 8 second timeout
+        });
+        
+        if (!response.ok) {
+            throw new Error('Response not OK');
+        }
+        
+        const html = await response.text();
+        
+        // Extract the first item ID from the search results
+        // Wowhead embeds item data in JavaScript within the page
+        const listviewMatch = html.match(/new Listview\(\{[^}]*template:\s*'item'[^}]*data:\s*(\[[\s\S]*?\])\}/);
+        
+        if (listviewMatch && listviewMatch[1]) {
+            try {
+                const data = JSON.parse(listviewMatch[1]);
+                if (data && data.length > 0 && data[0].id) {
+                    return { success: true, id: data[0].id.toString(), name: itemName };
+                }
+            } catch (e) {
+                console.error('Failed to parse Wowhead data:', e);
+            }
+        }
+        
+        // Fallback: try to find item IDs in the HTML directly
+        const itemIdMatch = html.match(/\/item[=/](\d+)/);
+        if (itemIdMatch) {
+            return { success: true, id: itemIdMatch[1], name: itemName };
+        }
+        
+        return { success: false, name: itemName, error: 'No item found', searchUrl };
+        
+    } catch (error) {
+        console.warn(`Search failed for "${itemName}":`, error.message);
+        return { success: false, name: itemName, error: error.message, searchUrl };
+    }
+}
+
+function extractItemNames(text) {
+    const itemNames = [];
+    // Extract item names from square brackets like [Thunderfury, Blessed Blade of the Windseeker]
+    const itemNamePattern = /\[([^\]]+)\]/g;
+    let match;
+    while ((match = itemNamePattern.exec(text)) !== null) {
+        itemNames.push(match[1]);
+    }
+    return itemNames;
+}
+
+async function convertToTSM() {
     const input = document.getElementById('input').value;
     const output = document.getElementById('output');
     const itemCountEl = document.getElementById('itemCount');
@@ -41,8 +101,43 @@ function convertToTSM() {
         return;
     }
     
+    // Extract item IDs from various formats
     const itemIds = extractItemIds(input);
-    const uniqueCount = itemIds.length;
+    
+    // Extract item names and search for them
+    const itemNames = extractItemNames(input);
+    
+    const failedSearches = [];
+    
+    if (itemNames.length > 0) {
+        showMessage(`Searching Wowhead for ${itemNames.length} item name(s)... This may take a moment.`, 'info');
+        
+        for (const itemName of itemNames) {
+            const result = await searchWowheadForItemName(itemName);
+            if (result.success) {
+                itemIds.add(result.id);
+                console.log(`✓ Found ID ${result.id} for item: ${itemName}`);
+            } else {
+                console.warn(`✗ Could not find ID for item: ${itemName}`);
+                failedSearches.push({ name: itemName, searchUrl: result.searchUrl });
+            }
+        }
+    }
+    
+    // Sort the IDs
+    const sortedIds = Array.from(itemIds).sort((a, b) => Number(a) - Number(b));
+    const uniqueCount = sortedIds.length;
+    
+    if (uniqueCount === 0 && failedSearches.length > 0) {
+        const searchLinks = failedSearches.map(item => 
+            `<a href="${item.searchUrl}" target="_blank" style="color: #58a6ff;">${item.name}</a>`
+        ).join(', ');
+        showMessage(`Could not automatically find items. Try searching manually: ${searchLinks}. Note: Automatic search may be blocked by ad blockers or browser extensions.`, 'error', true);
+        output.value = '';
+        itemCountEl.textContent = '0';
+        uniqueCountEl.textContent = '0';
+        return;
+    }
     
     if (uniqueCount === 0) {
         showMessage('No valid item IDs found in the input', 'error');
@@ -53,14 +148,23 @@ function convertToTSM() {
     }
     
     // Convert to TSM format: i:12345,i:67890,i:13579
-    const tsmFormat = itemIds.map(id => `i:${id}`).join(',');
+    const tsmFormat = sortedIds.map(id => `i:${id}`).join(',');
     output.value = tsmFormat;
     
     // Update stats (both show unique count since duplicates are removed)
     itemCountEl.textContent = uniqueCount;
     uniqueCountEl.textContent = uniqueCount;
     
-    showMessage(`Successfully converted ${uniqueCount} item(s) to TSM format!`, 'success');
+    let message = `Successfully converted ${uniqueCount} item(s) to TSM format!`;
+    if (failedSearches.length > 0) {
+        const searchLinks = failedSearches.map(item => 
+            `<a href="${item.searchUrl}" target="_blank" style="color: #58a6ff;">${item.name}</a>`
+        ).join(', ');
+        message += ` Could not find: ${searchLinks}. (May be blocked by ad blocker)`;
+        showMessage(message, 'info', true);
+    } else {
+        showMessage(message, 'success');
+    }
 }
 
 function copyToClipboard() {
@@ -105,15 +209,19 @@ function clearAll() {
     hideMessage();
 }
 
-function showMessage(text, type) {
+function showMessage(text, type, isHTML = false) {
     const messageEl = document.getElementById('message');
-    messageEl.textContent = text;
+    if (isHTML) {
+        messageEl.innerHTML = text;
+    } else {
+        messageEl.textContent = text;
+    }
     messageEl.className = `message ${type} show`;
     
-    // Auto-hide after 3 seconds
+    // Auto-hide after 5 seconds (longer for HTML messages with links)
     setTimeout(() => {
         hideMessage();
-    }, 3000);
+    }, isHTML ? 8000 : 3000);
 }
 
 function hideMessage() {
