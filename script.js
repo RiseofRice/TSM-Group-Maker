@@ -96,8 +96,15 @@ function extractItemNames(text) {
 function formatSearchLinks(failedSearches) {
     // Helper function to format failed searches as HTML links
     return failedSearches.map(item => 
-        `<a href="${item.searchUrl}" target="_blank" style="color: #58a6ff;">${item.name}</a>`
+        `<a href="${item.searchUrl}" target="_blank" style="color: #58a6ff;">${escapeHtml(item.name)}</a>`
     ).join(', ');
+}
+
+function escapeHtml(text) {
+    // Helper function to escape HTML special characters to prevent XSS
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 async function convertToTSM() {
@@ -170,7 +177,7 @@ async function convertToTSM() {
     // Show found items as confirmation
     if (foundItems.length > 0) {
         const foundItemsList = foundItems.map(item => 
-            `<br>✓ Found: <strong>${item.foundName}</strong> (ID: ${item.id})`
+            `<br>✓ Found: <strong>${escapeHtml(item.foundName)}</strong> (ID: ${escapeHtml(item.id)})`
         ).join('');
         message += foundItemsList;
     }
