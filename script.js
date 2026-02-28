@@ -1,7 +1,30 @@
 function extractItemIds(text) {
     // Returns a Set of item IDs found in the text
     const itemIds = new Set();
-    
+    const isHTML = /<[a-z][\s\S]*>/i.test(text);
+
+    // If content contains HTML (e.g. pasted directly from a webpage), parse it and
+    // extract item IDs from href attributes like /item=12345 or /item/12345.
+    // This replicates the "Grouper" workflow: select items on Wowhead / The Undermine
+    // Journal / WoWuction, copy, paste here.
+    if (isHTML) {
+        try {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(text, 'text/html');
+            doc.querySelectorAll('a[href]').forEach(link => {
+                const href = link.getAttribute('href');
+                if (href) {
+                    const itemMatch = href.match(/item[/=](\d+)/i);
+                    if (itemMatch) {
+                        itemIds.add(itemMatch[1]);
+                    }
+                }
+            });
+        } catch (e) {
+            console.warn('HTML parsing failed:', e);
+        }
+    }
+
     // Pattern 1: Wowhead URLs with item IDs
     // https://www.wowhead.com/item=12345 or https://www.wowhead.com/item=12345/item-name
     const wowheadUrlPattern = /wowhead\.com\/[a-z]*\/?item[=/](\d+)/gi;
@@ -9,25 +32,28 @@ function extractItemIds(text) {
     while ((match = wowheadUrlPattern.exec(text)) !== null) {
         itemIds.add(match[1]);
     }
-    
+
     // Pattern 2: Direct item IDs (numbers separated by commas, spaces, or newlines)
-    const numberPattern = /\b(\d+)\b/g;
-    while ((match = numberPattern.exec(text)) !== null) {
-        itemIds.add(match[1]);
+    // Skip for HTML input to avoid extracting unrelated numbers from markup.
+    if (!isHTML) {
+        const numberPattern = /\b(\d+)\b/g;
+        while ((match = numberPattern.exec(text)) !== null) {
+            itemIds.add(match[1]);
+        }
     }
-    
+
     // Pattern 3: item:xxxxx format
     const itemFormatPattern = /item:(\d+)/gi;
     while ((match = itemFormatPattern.exec(text)) !== null) {
         itemIds.add(match[1]);
     }
-    
+
     // Pattern 4: i:xxxxx format (already TSM format)
     const tsmFormatPattern = /i:(\d+)/gi;
     while ((match = tsmFormatPattern.exec(text)) !== null) {
         itemIds.add(match[1]);
     }
-    
+
     return itemIds;
 }
 
