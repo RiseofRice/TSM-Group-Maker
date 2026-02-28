@@ -287,3 +287,24 @@ document.getElementById('input').addEventListener('keydown', (e) => {
         convertToTSM();
     }
 });
+
+// When pasting, prefer the HTML version of clipboard data so that item links
+// copied from Wowhead, Grouper, The Undermine Journal, etc. are preserved.
+// The extractItemIds() function already knows how to parse HTML and pull out
+// /item=XXXXX hrefs, so we only need to make sure the raw HTML reaches it.
+document.getElementById('input').addEventListener('paste', (e) => {
+    const html = e.clipboardData && e.clipboardData.getData('text/html');
+    if (html && html.trim()) {
+        e.preventDefault();
+        const textarea = e.target;
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const current = textarea.value;
+        textarea.value = current.slice(0, start) + html + current.slice(end);
+        // Move cursor to end of inserted text
+        textarea.selectionStart = textarea.selectionEnd = start + html.length;
+        // Notify assistive technologies and any input listeners of the change
+        textarea.dispatchEvent(new Event('input'));
+    }
+    // If no HTML in clipboard, let the default plain-text paste proceed normally.
+});
