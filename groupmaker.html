@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TSM Group Maker - Wowhead to TradeSkillMaster Converter</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>TSM Group Maker</h1>
+        <p class="subtitle">Convert Wowhead item lists to TradeSkillMaster format</p>
+
+        <div class="info-box">
+            <h3>How to use</h3>
+            <ul>
+                <li>Paste Wowhead URLs, item IDs, or item links</li>
+                <li>Use <strong>[Item Name]</strong> format to search by name (e.g., [Thunderfury, Blessed Blade of the Windseeker])</li>
+                <li><strong>Paste webpage content</strong> directly from Wowhead, The Undermine Journal, WoWuction, etc. — item links are extracted automatically from the HTML</li>
+                <li>Click "Convert" to generate TSM format</li>
+                <li>Copy the output and import in TSM in-game</li>
+            </ul>
+            <p style="margin-top: 12px; font-size: 0.9em; color: #8b949e;">
+                <strong>Note:</strong> Item name search may be blocked by ad blockers or browser extensions. If automatic search fails, manual search links will be provided.
+            </p>
+        </div>
+
+        <div class="input-section">
+            <label for="input">Input (Wowhead URLs, IDs, or item links):</label>
+            <textarea id="input" placeholder="Examples:
+https://www.wowhead.com/item=12345
+https://www.wowhead.com/item=67890/item-name
+12345, 67890, 13579
+item:12345
+[Item Name]
+
+Or paste copied webpage content (HTML) from Wowhead,
+The Undermine Journal, WoWuction, etc.
+Mix and match any format!"></textarea>
+        </div>
+
+        <div class="button-group">
+            <button class="btn-primary" onclick="convertToTSM()">Convert to TSM Format</button>
+            <button class="btn-secondary" onclick="clearAll()">Clear All</button>
+        </div>
+
+        <div class="output-section">
+            <label for="output">TSM Format Output:</label>
+            <textarea id="output" readonly placeholder="Your TSM-formatted item string will appear here..."></textarea>
+            <div class="button-group">
+                <button class="btn-success" onclick="copyToClipboard()">Copy to Clipboard</button>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-value" id="itemCount">0</div>
+                <div class="stat-label">Items Found</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="uniqueCount">0</div>
+                <div class="stat-label">Unique Items</div>
+            </div>
+        </div>
+
+        <div id="message" class="message"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
